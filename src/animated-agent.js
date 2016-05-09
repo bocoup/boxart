@@ -3,7 +3,7 @@ import 'core-js/modules/es6.object.assign';
 import React, {Children} from 'react';
 import {findDOMNode} from 'react-dom';
 
-import Component from './ancestor-update';
+import Component from './ancestor-auto-bind';
 
 import AnimatedCallbackOptions from './animated-callback-options';
 import AnimatedTimer from './animated-timer';
@@ -77,8 +77,8 @@ export default class AnimatedAgent extends Component {
 
   componentDidMount() {
     if (this.clientRender) {
-      window.addEventListener('resize', this.resize);
-      window.addEventListener('orientationchange', this.resize);
+      window.addEventListener('resize', this.handleResize);
+      window.addEventListener('orientationchange', this.handleResize);
 
       // Determine the agent's starting rectangle.
       AnimatedRect.getBoundingClientRect(findDOMNode(this), this.rect);
@@ -88,14 +88,18 @@ export default class AnimatedAgent extends Component {
   componentDidUpdate() {
     if (this.clientRender) {
       // Determine the agent's updated rectangle.
+      const lastRect = this.rect.clone();
       AnimatedRect.getBoundingClientRect(findDOMNode(this), this.rect);
+      if (!lastRect.equal(this.rect)) {
+        this.resize(this.soon());
+      }
     }
   }
 
   componentWillUnmount() {
     if (this.clientRender) {
-      window.removeEventListener('resize', this.resize);
-      window.removeEventListener('orientationchange', this.resize);
+      window.removeEventListener('resize', this.handleResize);
+      window.removeEventListener('orientationchange', this.handleResize);
     }
   }
 
@@ -364,7 +368,11 @@ export default class AnimatedAgent extends Component {
     });
   }
 
-  resize() {
+  handleResize() {
+    this.resize();
+  }
+
+  resize(when) {
     // At the end of this JS frame query the DOM for the positions of all
     // Animated objects. Since we normally only query when an element has been
     // updated by React we can only know where the element is now, we need to
@@ -375,7 +383,7 @@ export default class AnimatedAgent extends Component {
     // effected by siblings updating and the lifecycle step for a specific
     // element happens in the middle of the whole set of React elements
     // updating.
-    this.frame()
+    (when || this.frame())
     .then(() => {
       // Temporarily remove animation styling so we can get the new rects.
       for (const key in this.animateds) {
