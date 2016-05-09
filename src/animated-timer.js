@@ -6,11 +6,13 @@ export default class AnimatedTimer {
     this._fulfilled = false;
     this.promise = null;
     this._joinIndex = 0;
+    this._joins = [];
   }
 
   _init(fn = function() {}) {
     this._oncancel = null;
     this._fulfilled = false;
+    this._joins = [];
     const run = this.run;
     this.promise = new Promise((resolve, reject) => {
       this._resolve = resolve;
@@ -32,6 +34,7 @@ export default class AnimatedTimer {
     }
     const run = this.run;
     const _joinIndex = ++this._joinIndex;
+    this._joins.push(_joinIndex);
     return Promise.resolve(promise)
     .then(() => {
       // This will add this chain to the end of resolving promises. We don't
@@ -43,8 +46,12 @@ export default class AnimatedTimer {
       Promise.resolve()
       .then(() => Promise.resolve())
       .then(() => {
-        if (this._joinIndex === _joinIndex) {
-          this._resolve();
+        const index = this._joins.indexOf(_joinIndex);
+        if (index !== -1) {
+          this._joins.splice(index, 1);
+          if (this._joins.length === 0) {
+            this._resolve();
+          }
         }
       });
       if (this._fulfilled) {
@@ -66,8 +73,12 @@ export default class AnimatedTimer {
     if (this._oncancel) {
       cancelResult = this._oncancel();
     }
-    this._reject(new Error('Timer canceled'))
+    this._reject(new Error('Timer canceled'));
     return cancelResult;
+  }
+
+  join(promise) {
+    return this._join(promise);
   }
 
   frame() {

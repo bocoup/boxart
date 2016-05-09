@@ -100,7 +100,7 @@ describe('AnimatedRect', function() {
 
   it('creates a rectangle from an element', function() {
     const rect = AnimatedRect.getBoundingClientRect(div);
-    expectSquare(rect, 0, div.offsetTop);
+    expectSquare(rect, 0, div.getBoundingClientRect().top);
   });
 
 });

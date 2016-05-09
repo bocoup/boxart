@@ -66,6 +66,24 @@ describe('AnimatedTimer', function() {
     return promise;
   });
 
+  it('joins after all arbitrary promises', function() {
+    const timer = agent.timer();
+    Promise.resolve().then(() => fakeTimers.tick(10));
+    const promises = [
+      Promise.resolve(),
+      new Promise(requestAnimationFrame),
+      new Promise(resolve => setTimeout(resolve, 10))
+    ];
+    let allJoined = false;
+    const all = Promise.all(promises)
+    .then(() => {allJoined = true;})
+    promises.forEach(timer.join, timer);
+    return timer
+    .then(() => {
+      expect(allJoined).to.be.ok;
+    });
+  });
+
   it('waits until next animation frame', function() {
     const timer = agent.timer();
     return timer.frame();

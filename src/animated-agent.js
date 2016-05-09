@@ -175,9 +175,9 @@ export default class AnimatedAgent extends Component {
     // origin so this animates from a relative position to (0, 0).
     const start = Date.now();
     const style = {
-      transform: null,
       zIndex: 1,
     };
+    rect.transformStyle(rect, style);
     this.setReplaceStyle(animated, animatedEl, style);
     // A temporary storage value that can be reused to reduce memory churn
     // and very easily track the position in the animation in case its
@@ -194,7 +194,7 @@ export default class AnimatedAgent extends Component {
       const t = Math.min((now - start) / 1000 / duration, 1);
       // Create a transform that is the difference from the position in the
       // animation to the origin of the element.
-      style.transform = rect.interpolate(lastRect, t, tRect).transform(rect);
+      rect.interpolate(lastRect, t, tRect).transformStyle(rect, style);
       this.setAnimatedStyle(animated, animatedEl, style);
       // Return a position in time, timer.loop will resolve the promise it
       // create when t is greater than or equal to 1.
@@ -279,15 +279,19 @@ export default class AnimatedAgent extends Component {
   _animate(key, animated, animatedEl, lastRect, rect) {
     const options = this.optionsPool.shift() || new AnimatedCallbackOptions();
     options.set(this, animated, animatedEl, lastRect, rect);
-    this.animations[key] = animated.animate(options);
+    const animation = this.animations[key] = animated.animate(options);
     // If the animation is a thenable, use it to add the used options object
     // into a pool so it can be reused.
     if (this.animations[key] && this.animations[key].then) {
       this.animations[key].then(() => {
-        this.animations[key] = null;
+        if (animation === this.animations[key]) {
+          this.animations[key] = null;
+        }
         this.optionsPool.unshift(options);
       }, error => {
-        this.animations[key] = null;
+        if (animation === this.animations[key]) {
+          this.animations[key] = null;
+        }
         this.optionsPool.unshift(options);
 
         // Handle the Timer canceled error. Any other errors should be handled
